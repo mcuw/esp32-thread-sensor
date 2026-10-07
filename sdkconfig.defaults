@@ -1,0 +1,32 @@
+# ---- Target ----
+CONFIG_IDF_TARGET="esp32c6"
+
+# ---- LP-Core (ULP) ----
+CONFIG_ULP_COPROC_ENABLED=y
+CONFIG_ULP_COPROC_TYPE_LP_CORE=y
+CONFIG_ULP_COPROC_RESERVE_MEM=8192
+
+# ---- Quick Boottime / less energy consumption ----
+CONFIG_BOOTLOADER_SKIP_VALIDATE_IN_DEEP_SLEEP=y
+CONFIG_BOOTLOADER_LOG_LEVEL_NONE=y
+#CONFIG_LOG_DEFAULT_LEVEL_WARN=y
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+
+# ---- THREAD (PREPARATION, comment out by now) ----
+# Namen und Optionen gegen deine IDF-Version pruefen (Beispiele:
+# openthread/ot_sleepy_device und openthread/ot_cli in esp-idf/examples).
+#
+# CONFIG_OPENTHREAD_ENABLED=y
+# CONFIG_OPENTHREAD_MTD=y                 # Minimal Thread Device (Batterie-Sensor)
+# CONFIG_OPENTHREAD_FTD=n
+# CONFIG_OPENTHREAD_CLI=n                 # spart Flash/RAM im Betrieb
+# CONFIG_OPENTHREAD_COAP=y                # falls CoAP als Transport genutzt wird
+# CONFIG_OPENTHREAD_CHILD_TIMEOUT=240     # ggf. an Heartbeat anpassen
+# CONFIG_OPENTHREAD_NETWORK_AUTO_START=n  # wir starten den Stack selbst
+# CONFIG_IEEE802154_ENABLED=y
+# CONFIG_PM_ENABLE=y                      # nur relevant fuer Light-Sleep/SED
+# CONFIG_FREERTOS_USE_TICKLESS_IDLE=y
+#
+# Thread speichert das Active Dataset im NVS. NVS-Partition muss vorhanden sein
+# und darf beim Flashen nicht geloescht werden (idf.py flash, nicht erase-flash).

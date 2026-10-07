@@ -1,0 +1,24 @@
+menu "Thermo Sensor"
+
+    choice SENSOR_TYPE
+        prompt "Sensortyp (LP-Core)"
+        default SENSOR_BME280
+        help
+            Waehlt den Sensor-Adapter, der in den LP-Core gebaut wird.
+
+        config SENSOR_BME280
+            bool "Bosch BME280 / BMP280 (z. B. GY-BME280)"
+
+        config SENSOR_SHT4X
+            bool "Sensirion SHT4x (SHT40 / SHT41 / SHT45)"
+    endchoice
+
+    config SENSOR_I2C_ADDR
+        hex "I2C-Adresse (7 Bit)"
+        default 0x76 if SENSOR_BME280
+        default 0x44 if SENSOR_SHT4X
+        help
+            BME280: 0x76 (SDO an GND) oder 0x77 (SDO an VCC).
+            SHT4x:  0x44 (AD1B), 0x45 (BD1B), 0x46 (CD1B).
+
+endmenu
