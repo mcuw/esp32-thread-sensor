@@ -69,3 +69,9 @@ flags=0x04
 ### No device found
 
 Beim nativen USB-Port verschwindet die Verbindung bei jedem Einschlafen und meldet sich neu. Wenn dir Zeilen fehlen, nimm den UART-Port.
+
+### How to exit serial monitor
+
+```
+CTRL+t then x
+```
