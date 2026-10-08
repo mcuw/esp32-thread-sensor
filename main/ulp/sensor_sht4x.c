@@ -1,4 +1,4 @@
-/* Adapter: Sensirion SHT4x (SHT40 / SHT41 / SHT45), has same protokoll.
+/* Adapter: Sensirion SHT4x (SHT40 / SHT41 / SHT45). Temperature and Humidity come from single messurement.
  * ATTENTION: LP-I2C-API: lp_core_i2c_master_* from lp_core_i2c.h. */
 #include "sensor.h"
 #include "ulp_lp_core.h"
@@ -15,6 +15,7 @@
 volatile uint32_t sensor_id = 0;  /* will be set after first successfully read of the address */
 volatile uint32_t sensor_i2c_errors = 0;
 volatile uint32_t sensor_invalid_errors = 0;
+volatile uint32_t sensor_last_err = 0;
 
 static uint8_t crc8(const uint8_t *d)   /* Polynom 0x31, Init 0xFF, 2 Bytes */
 {
@@ -35,27 +36,37 @@ bool sensor_init(void)
 bool sensor_start(void)
 {
     uint8_t cmd = CMD_MEASURE_LOW;
-    if (lp_core_i2c_master_write_to_device(LP_I2C_NUM_0, CONFIG_SENSOR_I2C_ADDR,
-                                               &cmd, 1, I2C_TIMEOUT) != ESP_OK) {
-        sensor_i2c_errors++;
-        return false;
-    }
+    esp_err_t r = lp_core_i2c_master_write_to_device(LP_I2C_NUM_0, CONFIG_SENSOR_I2C_ADDR,
+                                                     &cmd, 1, I2C_TIMEOUT);
+    sensor_last_err = (uint32_t)r;
+    if (r != ESP_OK) { sensor_i2c_errors++; return false; }
     return true;
 }
 
-bool sensor_read(int32_t *t_c100)
+bool sensor_read(int32_t *t_c100, int32_t *rh_c100)
 {
     uint8_t b[6];
-    if (lp_core_i2c_master_read_from_device(LP_I2C_NUM_0, CONFIG_SENSOR_I2C_ADDR,
-                                                b, 6, I2C_TIMEOUT) != ESP_OK) {
-        sensor_i2c_errors++;
-        return false;
-    }
+    esp_err_t r = lp_core_i2c_master_read_from_device(LP_I2C_NUM_0, CONFIG_SENSOR_I2C_ADDR,
+                                                      b, 6, I2C_TIMEOUT);
+    sensor_last_err = (uint32_t)r;
+    if (r != ESP_OK) { sensor_i2c_errors++; return false; }
     if (crc8(&b[0]) != b[2]) { sensor_invalid_errors++; return false; }
 
-    uint32_t raw = ((uint32_t)b[0] << 8) | b[1];
-    /* T = -45 + 175 * raw / 65535  ->  in 0,01 Grad C, gerundet */
-    *t_c100 = (int32_t)((raw * 17500u + 32767u) / 65535u) - 4500;
+    uint32_t raw_t = ((uint32_t)b[0] << 8) | b[1];
+    /* T = -45 + 175 * raw / 65535 */
+    *t_c100 = (int32_t)((raw_t * 17500u + 32767u) / 65535u) - 4500;
+
+    *rh_c100 = -1;
+    if (crc8(&b[3]) == b[5]) {
+        uint32_t raw_h = ((uint32_t)b[3] << 8) | b[4];
+        /* RH = -6 + 125 * raw / 65535, auf 0..100 % begrenzt */
+        int32_t rh = (int32_t)((raw_h * 12500u + 32767u) / 65535u) - 600;
+        if (rh < 0) rh = 0;
+        if (rh > 10000) rh = 10000;
+        *rh_c100 = rh;
+    } else {
+        sensor_invalid_errors++;
+    }
     sensor_id = CONFIG_SENSOR_I2C_ADDR;
     return true;
 }

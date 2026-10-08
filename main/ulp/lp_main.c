@@ -10,30 +10,31 @@
 #include <stdbool.h>
 #include "ulp_lp_core.h"
 #include "ulp_lp_core_utils.h"
+#include "ulp_lp_core_lp_timer_shared.h"
 #include "sensor.h"
-#include "ulp_lp_core_lp_timer_shared.h"   /* header-name */
 
 #define EV_HEAT     (1u << 0)
 #define EV_FAN      (1u << 1)
 #define EV_FAIL     (1u << 2)
 #define FAIL_LIMIT  10
 
-/* Initial values set by main core on boot time, all values in 0,01 Grad C */
+/* Initial values set by main CPU on boot time, all values in 0,01 Grad C */
 volatile int32_t  heat_on_c100      = 2300;   /* below -> heat on  */
 volatile int32_t  heat_off_c100     = 2400;   /* above -> heat off */
 volatile int32_t  fan_on_c100       = 2650;   /* above -> Fan on   */
 volatile int32_t  fan_off_c100      = 2600;   /* below -> Fan off  */
 volatile int32_t  temp_offset_c100  = 0;      /* adjust to referencethermometer */
+volatile int32_t  rh_offset_c100    = 0;      /* Korrektur gegen Referenzhygrometer  */
 volatile uint32_t hit_limit         = 3;      /* Change trigger when MORE then hit_limit times reached */
+volatile uint32_t period_us         = 2000000;
 
 /* Shared state, which is readable by the main CPU */
 volatile uint32_t heat_cmd        = 2;        /* 0 = aus, 1 = an, 2 = unbekannt */
 volatile uint32_t fan_cmd         = 2;
 volatile uint32_t event_flags     = 0;
 volatile int32_t  last_temp_c100  = 0;
-
-volatile uint32_t run_count = 0;
-volatile uint32_t period_us = 2000000;
+volatile int32_t  last_rh_c100    = -1;       /* -1 = nicht verfuegbar */
+volatile uint32_t run_count       = 0;
 
 /* only private */
 static uint32_t heat_cnt = 0, fan_cnt = 0, fail_cnt = 0, pending = 0;
@@ -78,10 +79,16 @@ static uint32_t cycle(void)
 
     /* Get the result of the previous messurement */
     if (expected) {
-        int32_t t;
+        int32_t t, rh;
         pending = 0;
-        if (sensor_read(&t)) {
+        if (sensor_read(&t, &rh)) {
             last_temp_c100 = t + temp_offset_c100;
+            if (rh >= 0) {
+                rh += rh_offset_c100;
+                if (rh < 0) rh = 0;
+                if (rh > 10000) rh = 10000;
+            }
+            last_rh_c100 = rh;
             got = true;
         }
     }
@@ -107,7 +114,6 @@ static uint32_t cycle(void)
 int main(void)
 {
     run_count++;
-
     uint32_t events = cycle();
 
     if (events & EV_FAIL) {          /* new classification after sensor failed, when the sensor is reachable again */
@@ -119,7 +125,7 @@ int main(void)
         ulp_lp_core_wakeup_main_processor();
     }
 
-    ulp_lp_core_lp_timer_set_wakeup_time (period_us);
+    ulp_lp_core_lp_timer_set_wakeup_time(period_us);
     ulp_lp_core_halt();
     return 0;
 }

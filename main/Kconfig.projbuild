@@ -21,4 +21,24 @@ menu "Thermo Sensor"
             BME280: 0x76 (SDO an GND) oder 0x77 (SDO an VCC).
             SHT4x:  0x44 (AD1B), 0x45 (BD1B), 0x46 (CD1B).
 
+    config THERMO_TEMP_OFFSET_C100
+        int "Temperature-Offset (0,01 Grad C)"
+        range -1000 1000
+        default 0
+        help
+            Wird zur gemessenen Temperatur addiert. Beispiel: Anzeige 27,50,
+            Referenz 26,30 -> Offset -120. Laufzeit-Aenderung per NVS, siehe README.
+
+    config THERMO_RH_OFFSET_C100
+        int "Feuchte-Offset (0,01 %RH)"
+        range -2000 2000
+        default 0
+
+    config THERMO_OFFSET_FROM_KCONFIG
+        bool "Offsets aus Kconfig beim ersten Boot in NVS uebernehmen"
+        default n
+        help
+            Aus: Ein im NVS gespeicherter Offset hat Vorrang vor diesen Werten.
+            An: Die Kconfig-Werte ueberschreiben den NVS-Wert beim ersten Boot.
+
 endmenu

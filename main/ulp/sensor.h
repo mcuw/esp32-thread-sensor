@@ -35,7 +35,9 @@ bool sensor_init(void);
 /* Trigger a messurement. false on I2C-error. */
 bool sensor_start(void);
 
-/* Result of the last messurement in 0,01 Grad C. false on error or is invalid. */
-bool sensor_read(int32_t *t_c100);
+/* t_c100:  Temperature in 0,01 Grad C.
+ * rh_c100: Humidity in 0,01 %RH, or -1 if not available (BMP280, CRC-Fehler).
+ * Returns false: if temperature is invalid. */
+bool sensor_read(int32_t *t_c100, int32_t *rh_c100);
 
 #endif
