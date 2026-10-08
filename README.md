@@ -1,4 +1,10 @@
-# thermo_c6 - LP-Core-Thermostat mit waehlbarem Sensor (ESP32-C6)
+# ESP32 Thread Sensor with ESP32-C6 LP-core
+
+Select from a list of sensors (BME/P-280, SHT4x)
+
+## Usecase
+
+- thermostat
 
 ## Features
 
