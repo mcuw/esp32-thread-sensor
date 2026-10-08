@@ -8,15 +8,15 @@ Select from a list of sensors (BME/P-280, SHT4x)
 
 ## Features
 
-- Heat on und off
-- Fan on und off
+- Heat on and off
+- Fan on and off
 - Heartbeat
 - Deep-Sleep for low energy consumption
 - LP-Core with main CPU wakeup for continuous messurements
 - RTC-states
 
 ## Select a sensor (build-time)
-Variant 1: `idf.py menuconfig` -> "Thermo Sensor" -> Sensortype und I2C-Address.
+Variant 1: `idf.py menuconfig` -> "Thermo Sensor" -> Sensortype and I2C-Address.
 
 Variant 2: Overlay-file
 ```sh
