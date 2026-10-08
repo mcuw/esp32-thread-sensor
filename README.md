@@ -8,49 +8,48 @@ Select from a list of sensors (BME/P-280, SHT4x)
 
 ## Features
 
-Damit sind folgende Funktionen belegt:
-- Ventilator an und aus
-- Heizung an und aus
+- Heat on und off
+- Fan on und off
 - Heartbeat
-- Deep-Sleep
-- LP-Core-Wakeup
-- die RTC-Zustände
+- Deep-Sleep for low energy consumption
+- LP-Core with main CPU wakeup for continuous messurements
+- RTC-states
 
-## Sensor waehlen (Build-Zeit)
-Variante 1: `idf.py menuconfig` -> "Thermo Sensor" -> Sensortyp und I2C-Adresse.
+## Select a sensor (build-time)
+Variant 1: `idf.py menuconfig` -> "Thermo Sensor" -> Sensortype und I2C-Address.
 
-Variante 2: Overlay-Datei
+Variant 2: Overlay-file
+```sh
     rm -rf sdkconfig build
     idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.sht4x" set-target esp32c6
     idf.py build flash monitor
-(`sdkconfig.bme280` fuer BME280/BMP280.) Beim Wechsel sdkconfig und build loeschen.
+```
+(`sdkconfig.bme280` for BME280/BMP280.) Clean up sdkconfig and build/ on sensor change.
 
 | Kconfig | Sensor | Adresse |
 |---|---|---|
-| CONFIG_SENSOR_BME280 | BME280 / BMP280 (z. B. GY-BME280) | 0x76 / 0x77 |
+| CONFIG_SENSOR_BME280 | BME280 / BMP280 (e. g. GY-BME280) | 0x76 / 0x77 |
 | CONFIG_SENSOR_SHT4X | SHT40 / SHT41 / SHT45 | 0x44 / 0x45 / 0x46 |
 
-## Aufbau
-- `main/ulp/sensor.h`            Schnittstelle: sensor_init / sensor_start / sensor_read
-- `main/ulp/sensor_bme280.c`     Adapter BME280 (Register, Ganzzahl-Kompensation)
-- `main/ulp/sensor_sht4x.c`      Adapter SHT4x (Kommando + CRC)
-- `main/ulp/lp_main.c`           Schwellenpaare, Entprellung, Wakeup (sensorunabhaengig)
-- `main/main.c`                  Haupt-CPU, Thread-Vorbereitung ([THREAD-1] bis [THREAD-6])
+## Structure
+- `main/ulp/sensor.h`            Interface: sensor_init / sensor_start / sensor_read
+- `main/ulp/sensor_bme280.c`     Adapter BME280 (Register, integer-compensation)
+- `main/ulp/sensor_sht4x.c`      Adapter SHT4x (command + CRC)
+- `main/ulp/lp_main.c`           Threshold-paires, debounce, wake-up (sensor independend)
+- `main/main.c`                  Main-CPU, Thread-preparation ([THREAD-1] to [THREAD-6])
 
-Neuen Sensor ergaenzen: `sensor_xxx.c` schreiben, Eintrag in `Kconfig.projbuild`,
-Zweig in `main/CMakeLists.txt`.
+How to add a new sensor: create a `sensor_xxx.c` file, add entry in `Kconfig.projbuild`,
+handle in `main/CMakeLists.txt`.
 
-## Verdrahtung (LP-I2C)
-SDA = GPIO6, SCL = GPIO7, Pull-ups 4,7k bis 10k nach 3V3 (GY-Module haben oft schon welche).
-BME280: CSB an 3V3, SDO an GND (0x76) oder VCC (0x77).
+## Pinouts (LP-I2C)
+SDA = GPIO6, SCL = GPIO7, Pull-ups between 4,7k and 10k to 3V3 (GY-modules usually have them integrated).
+BME280: CSB to 3V3, SDO to GND (0x76) or VCC (0x77).
 
-## Pruefen
-Log beim Heartbeat: `sensor_id`: BME280 0x60, BMP280 0x58 (ohne Feuchte), SHT4x = Adresse,
-0 = Sensor nicht erreicht. `TEMP_OFFSET_C100` in main.c gegen Referenzthermometer einstellen.
+## Checks
+Log on Heartbeat: `sensor_id`: BME280 0x60, BMP280 0x58 (w/o humidity), SHT4x = Address,
+0 = Sensor not available. `TEMP_OFFSET_C100` in main.c calibrates to a reference-thermometer.
 
-Flashen ohne `erase-flash`, sonst geht das Thread-Dataset im NVS verloren.
-Nicht getestet: API-Namen (LP-Core, LP-I2C, OpenThread) aus dem Gedaechtnis, gegen die
-Beispiele deiner IDF-Version pruefen.
+Flash w/o `erase-flash`, otherwise the Thread-dataset in NVS will get lost.
 
 ```sh
 idf.py -p /dev/ttyACM0 build flash monitor
@@ -58,26 +57,22 @@ idf.py -p /dev/ttyACM0 build flash monitor
 
 ## States
 
-Heizung und Ventilator aus
-flags=0x00
-
-Heizung an, Ventilator aus
-flags=0x01
-
-Der Ventilator ist an
-flags=0x02
-
-Sensorausfall
-flags=0x04
+| flags | Heat | Fan |
+|---|---|---|
+| 0x00 | off | off |
+| 0x01 | on | off |
+| 0x02 | off | on |
+| 0x04 | N/A | N/A |
 
 ## Troubleshooting
 
 ### No device found
 
-Beim nativen USB-Port verschwindet die Verbindung bei jedem Einschlafen und meldet sich neu. Wenn dir Zeilen fehlen, nimm den UART-Port.
+The connection will be lost with the native USB-Port on every deep-sleep and reconnects. If there is no serial output then use the other UART-port.
 
-### How to exit serial monitor
+### How to exit the serial monitor
 
 ```
-CTRL+t then x
+CTRL+t
+then x
 ```
